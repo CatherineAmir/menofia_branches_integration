@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+
+
+        <record id="branches_tree_view" model="ir.ui.view">
+            <field name="name">consumption.branch.tree</field>
+            <field name="model">consumption.branch</field>
+            <field name="arch" type="xml">
+                <tree string="Branches">
+                    <field name="name"/>
+                    <field name="code"/>
+                </tree>
+            </field>
+        </record>
+
+
+
+        <record id="branches_act_window" model="ir.actions.act_window">
+            <field name="name">Database Branches</field>
+            <field name="type">ir.actions.act_window</field>
+            <field name="res_model">consumption.branch</field>
+<!--            <field name="view_type">tree</field>-->
+            <field name="view_mode">tree,form</field>
+
+        </record>
+
+        <menuitem name="Database Branches" id="branches_menu" parent="sita-e-invoicing.company_settings" action="branches_act_window" sequence="5"/>
+
+    </data>
+</odoo>

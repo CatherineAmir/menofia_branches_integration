@@ -1,0 +1,3 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_database_branches,access_database_branches,model_consumption_branch,sita-e-invoicing.group_invoicing_admin,1,1,1,1
+access_import_branch_lines,access_import_branch_lines,model_import_branch_lines,,1,1,1,1
