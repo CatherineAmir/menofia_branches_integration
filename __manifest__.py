@@ -28,6 +28,7 @@
 
         'views/branches_view.xml',
         'views/huge_import_lines.xml',
+        'views/invoice_summary.xml',
 
     ],
     # only loaded in demonstration mode

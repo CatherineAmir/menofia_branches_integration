@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <record id="tree_summary_import_form_inherit" model="ir.ui.view">
+            <field name="name">sita.inv_summary_inherited.tree</field>
+            <field name="model">sita.inv_summary</field>
+            <field name="inherit_id" ref="menofia_integration_files.summary_tree_view"/>
+            <field name="priority" eval="8"/>
+            <field name="arch" type="xml">
+                <xpath expr="//field[@name='customer_name']" position="replace">
+                    <field name="branch_id"/>
+                    <field name="branch_code" string="Branch Code"/>
+                </xpath>
+
+            </field>
+        </record>
+    </data>
+</odoo>

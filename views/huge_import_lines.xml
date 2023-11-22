@@ -28,7 +28,7 @@
                     decoration-warning="state =='partially_imported'"/>
 
                                     <button name="action_import_branch" string="Import Branch" type="object" class="btn btn-primary" states="not_imported"/>
-                                    <button name="action_import_rest" string="Import Branch" type="object" class="btn btn-primary" states="partially_imported"/>
+                                    <button name="action_import_rest" string="Import Branch Rest or Extra" type="object" class="btn btn-primary" states="partially_imported,completely_imported"/>
 
 
                                 </tree>
