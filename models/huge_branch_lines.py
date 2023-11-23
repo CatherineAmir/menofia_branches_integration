@@ -1,4 +1,4 @@
-from odoo import fields, models, api,_
+from odoo import fields, models, api, _
 from datetime import datetime
 import logging
 import cx_Oracle
@@ -10,11 +10,12 @@ import json
 
 _logger = logging.getLogger(__name__)
 
+
 class InvSummaryBranch(models.Model):
     _inherit = 'sita.inv_summary'
 
-    branch_id=fields.Many2one('consumption.branch',string="Branch Name")
-    branch_code=fields.Char(related='branch_id.code',store=1)
+    branch_id = fields.Many2one('consumption.branch', string="Branch Name")
+    branch_code = fields.Char(related='branch_id.code', store=1)
 
     @api.model
     def init(self):
@@ -85,9 +86,9 @@ class HugeImportBranchlines(models.Model):
     _name = 'import_branch_lines'
     _description = 'branch_lines'
 
-    import_id = fields.Many2one('sita_inv.huge_import',auto_join=1)
-    branch_id=fields.Many2one('consumption.branch',required=1)
-    branch_code=fields.Char(related='branch_id.code')
+    import_id = fields.Many2one('sita_inv.huge_import', auto_join=1)
+    branch_id = fields.Many2one('consumption.branch', required=1)
+    branch_code = fields.Char(related='branch_id.code')
     total_invoices = fields.Integer('Total Invoices', compute="_compute_numbers", store=True)
     total_posted = fields.Integer('Total Imported Invoice', compute="_compute_numbers", store=True)
     total_not_imported = fields.Integer('Total Not imported', compute="_compute_numbers", store=True)
@@ -100,8 +101,9 @@ class HugeImportBranchlines(models.Model):
     @api.depends('import_id.summary_ids_posted', 'import_id.summary_ids_not_imported')
     def _compute_numbers(self):
         for r in self:
-            r.total_not_imported = len(r.import_id.summary_ids_not_imported.filtered(lambda x:x.branch_id.id==r.branch_id.id))
-            r.total_posted = len(r.import_id.summary_ids_posted.filtered(lambda x:x.branch_id.id==r.branch_id.id))
+            r.total_not_imported = len(
+                r.import_id.summary_ids_not_imported.filtered(lambda x: x.branch_id.id == r.branch_id.id))
+            r.total_posted = len(r.import_id.summary_ids_posted.filtered(lambda x: x.branch_id.id == r.branch_id.id))
             r.total_invoices = r.total_posted + r.total_not_imported
             r.adjust_state()
 
@@ -116,9 +118,6 @@ class HugeImportBranchlines(models.Model):
             else:
                 self.state = 'partially_imported'
 
-
-
-
     def action_import_branch(self):
         self.import_id.first_import(branch_id=self.branch_id)
         self.adjust_state()
@@ -129,44 +128,52 @@ class HugeImportBranchlines(models.Model):
         self.import_id.partially_import(branch_id=self.branch_id)
         self.adjust_state()
         self._compute_numbers()
-        
+
         pass
 
 
-
 class HugeImportBranches(models.Model):
-    _inherit='sita_inv.huge_import'
+    _inherit = 'sita_inv.huge_import'
 
-    branch_line_ids=fields.One2many('import_branch_lines','import_id')
+    branch_line_ids = fields.One2many('import_branch_lines', 'import_id')
 
     @api.model
-    def create(self,vals):
-        res=super(HugeImportBranches,self).create(vals)
+    def create(self, vals):
+        res = super(HugeImportBranches, self).create(vals)
         res.create_branch_lines()
         return res
 
     def create_branch_lines(self):
-        branches=self.env['consumption.branch'].sudo().search([])
+        branches = self.env['consumption.branch'].sudo().search([])
 
         if branches:
             self.env['import_branch_lines'].create([{
-                'import_id':self.id,
-                'branch_id':b.id
+                'import_id': self.id,
+                'branch_id': b.id
 
             } for b in branches])
 
-    def first_import(self,branch_id=None):
+    def first_import(self, branch_id=None):
         self.message_post(body="Start importing")
+        if branch_id:
 
-        data_to_test = self.connect_database(self.database_set, self.name, [], [],branch_id=branch_id.code)
+            branch_code = branch_id.code
+        else:
+            branch_code = None
+
+        data_to_test = self.connect_database(self.database_set, self.name, [], [], branch_id=branch_code)
 
         self.error_dict.clear()
-        self.create_summary(data_to_test['INVOICE ID'], data_to_test['Customer Name'],branch_id=branch_id)
+        self.create_summary(data_to_test['INVOICE ID'], data_to_test['Customer Name'], branch_id=branch_id)
         self.test_all(data_to_test)
 
-
-    def partially_import(self, not_imported=None,branch_id=None):
-        self.message_post(body="Continue importing importing with branch_id {}".format(branch_id.code))
+    def partially_import(self, not_imported=None, branch_id=None):
+        if branch_id:
+            self.message_post(body="Continue importing importing with branch_id {}".format(branch_id.code))
+            branch_code = branch_id.code
+        else:
+            branch_code = None
+            self.message_post(body="Continue importing importing all")
         imported = self.cal_imported()
 
         names = []
@@ -175,22 +182,30 @@ class HugeImportBranches(models.Model):
         for n in not_imported:
             names.append(str(n.name))
         # _logger.info('domain_names %s', names)
-        data_to_test = self.connect_database(self.database_set, self.name, names, imported,branch_id=branch_id.code)
+        data_to_test = self.connect_database(self.database_set, self.name, names, imported, branch_id=branch_code)
         # logger.info('data_to_test %s',json.dumps(data_to_test))
         self.error_dict.clear()
-        self.create_summary(data_to_test['INVOICE ID'], data_to_test['Customer Name'],branch_id=branch_id.id)
+        self.create_summary(data_to_test['INVOICE ID'], data_to_test['Customer Name'], branch_id=branch_id.id)
 
         self.test_all(data_to_test)
 
+    def adjust_state(self):
 
+        # _logger.info("states %s",reduce(self.branch_line_ids.mapped('state')) == "not_imported")
+        if len(self.branch_line_ids.filtered(lambda x: x.state == 'not_imported')) == len(self.branch_line_ids):
+            self.state = 'not_imported'
+        elif len(self.branch_line_ids.filtered(lambda x: x.state == 'completely_imported')) == len(
+                self.self.branch_line_ids):
+            self.state = 'completely_imported'
+        else:
+            self.state = 'partially_imported'
 
-    def connect_database(self, dataset, my_date, domain, imported,branch_id=None):
+    def connect_database(self, dataset, my_date, domain, imported, branch_id=None):
         # _logger.info('domain %s', domain)
         if not branch_id:
             _logger.info("in the if not branch")
-            data_to_test=super(HugeImportBranches,self).connect_database(dataset, my_date, domain, imported)
+            data_to_test = super().connect_database(dataset, my_date, domain, imported)
             return data_to_test
-
 
         ip = '192.168.40.6'
         # _logger.info('in the inherited connect')
@@ -256,7 +271,7 @@ class HugeImportBranches(models.Model):
                               TAX_CODE,
                               '',
                               ''
-                              
+
                               from {view:}
                               where 
                                 COMPCODE=:branch_code
@@ -264,30 +279,28 @@ class HugeImportBranches(models.Model):
                               to_date(date_issue, 'dd/mm/rrrr') = to_date(:mydate, 'dd/mm/rrrr')
 
                            """.format(view=view_name)
-                            # COMPCODE=:branch_code
-                             
-                              
-                              # and 
-                           
+                # COMPCODE=:branch_code
+
+                # and
+
                 # query = """
-                              # select *
-                              # from {view:}
-                              # WHERE ROWNUM <= 5
-                              
-                           # """.format(view=view_name)
-                           # where
-                              # to_date(date_issue, 'dd/mm/rrrr') = to_date(:mydate, 'dd/mm/rrrr')
-                              # limit 3
-                _logger.info('ready to connect consumption invoice %s',branch_id)
+                # select *
+                # from {view:}
+                # WHERE ROWNUM <= 5
+
+                # """.format(view=view_name)
+                # where
+                # to_date(date_issue, 'dd/mm/rrrr') = to_date(:mydate, 'dd/mm/rrrr')
+                # limit 3
+                _logger.info('ready to connect consumption invoice %s', branch_id)
 
                 cursor = conn.cursor()
                 # _logger.info("Query %s", query)
-                cursor.execute(query, mydate=str(my_date.strftime('%d/%m/%Y')),branch_code=branch_id)
-                # 
+                cursor.execute(query, mydate=str(my_date.strftime('%d/%m/%Y')), branch_code=branch_id)
+                #
                 # cursor.execute(query,)
                 res = cursor.fetchall()
-                _logger.info('res %s',json.dumps(res))
-                
+                _logger.info('res %s', json.dumps(res))
 
                 columns = cursor.description
                 _logger.info('len res consumption description %s', columns)
@@ -329,10 +342,9 @@ class HugeImportBranches(models.Model):
 
                    to_date(date_issue, 'dd/mm/rrrr') >= to_date(:mydate, 'dd/mm/rrrr') and
                     to_date(date_issue, 'dd/mm/rrrr') <= to_date(:mydate2, 'dd/mm/rrrr')
-                   
-                   
-                                   """
 
+
+                                   """
 
                 query_2 = """
 
@@ -370,8 +382,8 @@ class HugeImportBranches(models.Model):
 
                                 to_date(date_issue, 'dd/mm/rrrr') >= to_date(:mydate, 'dd/mm/rrrr') and
                                 to_date(date_issue, 'dd/mm/rrrr') <= to_date(:mydate2, 'dd/mm/rrrr') and
-                                 
-                               
+
+
                                    """
 
                 # _logger.info('ready to connect discount')
@@ -473,9 +485,9 @@ class HugeImportBranches(models.Model):
                 res = cursor.fetchall()
                 # _logger.info('res %s',json.dumps(res))
                 # _logger.info('len res %s', len(res))
-                self.total_number_of_invoices=len(list(set(res[i][0] for i in range(len(res)))))
-                _logger.info('res invoice names %s',self.total_number_of_invoices)
-                self.total_number_of_lines=len(res)
+                self.total_number_of_invoices = len(list(set(res[i][0] for i in range(len(res)))))
+                _logger.info('res invoice names %s', self.total_number_of_invoices)
+                self.total_number_of_lines = len(res)
                 self.env.cr.commit()
                 self.env.cr.savepoint()
 
@@ -576,7 +588,7 @@ class HugeImportBranches(models.Model):
         # _logger.info('data ready to test len data %s', len(self.data))
         return data_to_test
 
-    def create_summary(self, inv_names, inv_cust,branch_id=None):
+    def create_summary(self, inv_names, inv_cust, branch_id=None):
 
         inv_cust = list(set(inv_cust))
         # _logger.info('len inv_cust %s',len(list(set(inv_cust))))
