@@ -185,7 +185,7 @@ class HugeImportBranches(models.Model):
         data_to_test = self.connect_database(self.database_set, self.name, names, imported, branch_id=branch_code)
         # logger.info('data_to_test %s',json.dumps(data_to_test))
         self.error_dict.clear()
-        self.create_summary(data_to_test['INVOICE ID'], data_to_test['Customer Name'], branch_id=branch_id.id)
+        self.create_summary(data_to_test['INVOICE ID'], data_to_test['Customer Name'], branch_id=branch_id)
 
         self.test_all(data_to_test)
 
@@ -195,7 +195,7 @@ class HugeImportBranches(models.Model):
         if len(self.branch_line_ids.filtered(lambda x: x.state == 'not_imported')) == len(self.branch_line_ids):
             self.state = 'not_imported'
         elif len(self.branch_line_ids.filtered(lambda x: x.state == 'completely_imported')) == len(
-                self.self.branch_line_ids):
+                self.branch_line_ids):
             self.state = 'completely_imported'
         else:
             self.state = 'partially_imported'
@@ -261,7 +261,7 @@ class HugeImportBranches(models.Model):
                               TIMME_ISSUED,
                               INVOICE_DISCOUNT,
                               PRODUCT_CODE,
-                              '',
+                              description,
                               QUANTITY,
                               UNIT,
                               CUSTOMER_CURRENCY,
@@ -270,7 +270,9 @@ class HugeImportBranches(models.Model):
                               DISCOUNT,
                               TAX_CODE,
                               '',
-                              ''
+                              '',
+                              '',
+                              SALESORDERDESCRIPTION
 
                               from {view:}
                               where 
@@ -279,19 +281,7 @@ class HugeImportBranches(models.Model):
                               to_date(date_issue, 'dd/mm/rrrr') = to_date(:mydate, 'dd/mm/rrrr')
 
                            """.format(view=view_name)
-                # COMPCODE=:branch_code
 
-                # and
-
-                # query = """
-                # select *
-                # from {view:}
-                # WHERE ROWNUM <= 5
-
-                # """.format(view=view_name)
-                # where
-                # to_date(date_issue, 'dd/mm/rrrr') = to_date(:mydate, 'dd/mm/rrrr')
-                # limit 3
                 _logger.info('ready to connect consumption invoice %s', branch_id)
 
                 cursor = conn.cursor()
@@ -335,6 +325,8 @@ class HugeImportBranches(models.Model):
                   DISCOUNT,
                   TAX_CODE,
                   '',
+                  '',
+                  '',
                   ''
                   from billelec_tax_discount 
                   where
@@ -375,6 +367,8 @@ class HugeImportBranches(models.Model):
                                   PRICE,
                                   DISCOUNT,
                                   TAX_CODE,
+                                  '',
+                                  '',
                                   '',
                                   ''
                                   from billelec_tax_add 
@@ -468,6 +462,8 @@ class HugeImportBranches(models.Model):
                    DISCOUNT,
                    TAX_CODE,
                    '',
+                   '',
+                   '',
                    ''
 
 
@@ -502,7 +498,8 @@ class HugeImportBranches(models.Model):
                      'Activity Code', 'Date Issued', 'Time Issued', 'Invoice Discount(fixed)', 'Product Code',
                      'Product Desc', 'Quantity',
                      'Unit', 'Customer Currency', 'Exchange Rate', 'Customer Price', 'Discount(%)(line)',
-                     'Taxes Codes', 'Value Difference', 'Fixed Discount After Tax']
+                     'Taxes Codes', 'Value Difference', 'Fixed Discount After Tax','Sales order Reference',
+                     'Sales Order Description']
 
         self.data.clear()
         product_taxes = {'EG-266662870-1527': 'OF04', 'EG-266662870-854': 'OF02'}
